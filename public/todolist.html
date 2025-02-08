@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>タスク管理</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchTasks();
+
+            document.getElementById("addTaskForm").addEventListener("submit", function(event) {
+                event.preventDefault();
+                addTask();
+            });
+        });
+
+        function fetchTasks() {
+            fetch('/tasks')
+                .then(response => response.json())
+                .then(tasks => {
+                    let taskList = document.getElementById("taskList");
+                    taskList.innerHTML = "";
+                    tasks.forEach(task => {
+                        let li = document.createElement("li");
+                        li.innerHTML = `
+                            <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} 
+                                onchange="toggleTaskStatus(${task.id}, this.checked)">
+                            <span class="${task.status === 'completed' ? 'completed' : ''}">${task.title} (${task.status})</span>
+                            <button onclick="deleteTask(${task.id})">削除</button>
+                        `;
+                        taskList.appendChild(li);
+                    });
+                });
+        }
+
+        function addTask() {
+            let title = document.getElementById("title").value;
+            let description = document.getElementById("description").value;
+            let due_date = document.getElementById("due_date").value;
+
+            fetch('/tasks', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, description, due_date })
+            })
+            .then(response => response.json())
+            .then(() => {
+                fetchTasks();
+                document.getElementById("addTaskForm").reset();
+            });
+        }
+
+        function toggleTaskStatus(taskId, isChecked) {
+            let newStatus = isChecked ? 'completed' : 'pending';
+
+            fetch(`/tasks/${taskId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ status: newStatus })
+            })
+            .then(() => fetchTasks());
+        }
+
+        function deleteTask(taskId) {
+            fetch(`/tasks/${taskId}`, { method: "DELETE" })
+                .then(() => fetchTasks());
+        }
+    </script>
+    <style>
+        .completed {
+            text-decoration: line-through;
+            color: gray;
+        }
+    </style>
+</head>
+<body>
+    <h2>タスク一覧</h2>
+    <ul id="taskList"></ul>
+
+    <h3>新しいタスクを追加</h3>
+    <form id="addTaskForm">
+        <input type="text" id="title" placeholder="タスク名" required>
+        <input type="text" id="description" placeholder="詳細">
+        <input type="date" id="due_date">
+        <button type="submit">追加</button>
+    </form>
+</body>
+</html>
