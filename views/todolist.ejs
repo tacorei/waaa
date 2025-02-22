@@ -23,19 +23,26 @@
                     taskList.innerHTML = "";
 
                     tasks.forEach(task => {
-                        let li = document.createElement("li");
-                        li.innerHTML = `
-                            <input type="checkbox" ${task.status === '完了' ? 'checked' : ''} 
-                                onchange="toggleTaskStatus(${task.id}, this.checked)">
-                            <span class="${task.status === '完了' ? 'completed' : ''}">
-                                ${task.title} (${task.status}) - 締切: ${task.due_date || '未設定'}
-                            </span>
-                            <button onclick="editTask(${task.id}, '${task.title}', '${task.due_date}')">編集</button>
-                            <button onclick="deleteTask(${task.id})">削除</button>
-                        `;
-                        taskList.appendChild(li);
+                        renderTask(task);
                     });
                 });
+        }
+
+        // タスクを1つ描画する関数
+        function renderTask(task) {
+            let taskList = document.getElementById("taskList");
+            let li = document.createElement("li");
+            li.id = `task-${task.id}`;
+            li.innerHTML = `
+                <input type="checkbox" ${task.status === '完了' ? 'checked' : ''} 
+                    onchange="toggleTaskStatus(${task.id}, this.checked)">
+                <span class="${task.status === '完了' ? 'completed' : ''}">
+                    ${task.title} (${task.status}) - 締切: ${task.due_date || '未設定'}
+                </span>
+                <button onclick="openEditPopup(${task.id}, '${task.title}', '${task.due_date}')">編集</button>
+                <button onclick="deleteTask(${task.id})">削除</button>
+            `;
+            taskList.appendChild(li);
         }
 
         // タスクの追加
@@ -51,8 +58,8 @@
                 body: JSON.stringify({ title, description, due_date, alarm_time })
             })
             .then(response => response.json())
-            .then(() => {
-                fetchTasks();
+            .then(task => {
+                renderTask(task);  // 新しいタスクを即座に描画
                 document.getElementById("addTaskForm").reset();
             });
         }
@@ -72,22 +79,40 @@
         // タスクを削除する
         function deleteTask(taskId) {
             fetch(`/tasks/delete/${taskId}`, { method: "DELETE" })
-                .then(() => fetchTasks());
+                .then(() => {
+                    document.getElementById(`task-${taskId}`).remove();
+                });
         }
 
-        // タスクを編集する
-        function editTask(taskId, currentTitle, currentDueDate) {
-            let newTitle = prompt("新しいタスク名を入力してください:", currentTitle);
-            let newDueDate = prompt("新しい締切日を入力してください (YYYY-MM-DD):", currentDueDate);
+        // 編集ポップアップを開く
+        function openEditPopup(taskId, currentTitle, currentDueDate) {
+            document.getElementById("editTaskId").value = taskId;
+            document.getElementById("editTitle").value = currentTitle;
+            document.getElementById("editDueDate").value = currentDueDate;
 
-            if (newTitle && newDueDate) {
-                fetch(`/tasks/edit/${taskId}`, {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title: newTitle, due_date: newDueDate })
-                })
-                .then(() => fetchTasks());
-            }
+            document.getElementById("editPopup").style.display = "block";
+        }
+
+        // 編集ポップアップを閉じる
+        function closeEditPopup() {
+            document.getElementById("editPopup").style.display = "none";
+        }
+
+        // タスクを編集して保存する
+        function saveTaskEdits() {
+            const taskId = document.getElementById("editTaskId").value;
+            const newTitle = document.getElementById("editTitle").value;
+            const newDueDate = document.getElementById("editDueDate").value;
+
+            fetch(`/tasks/edit/${taskId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title: newTitle, due_date: newDueDate })
+            })
+            .then(() => {
+                fetchTasks();
+                closeEditPopup();
+            });
         }
     </script>
 
@@ -112,6 +137,29 @@
         input, button {
             margin: 5px 0;
         }
+
+        /* ポップアップスタイル */
+        #editPopup {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #editPopup input {
+            display: block;
+            margin-bottom: 10px;
+            width: 100%;
+        }
+
+        #editPopup button {
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -128,5 +176,15 @@
         <input type="time" id="alarm_time" placeholder="アラーム時間">
         <button type="submit">追加</button>
     </form>
+
+    <!-- 編集ポップアップフォーム -->
+    <div id="editPopup">
+        <h3>✏️ タスク編集</h3>
+        <input type="hidden" id="editTaskId">
+        <input type="text" id="editTitle" placeholder="新しいタスク名" required>
+        <input type="date" id="editDueDate" placeholder="新しい締切日">
+        <button onclick="saveTaskEdits()">保存</button>
+        <button onclick="closeEditPopup()">キャンセル</button>
+    </div>
 </body>
 </html>

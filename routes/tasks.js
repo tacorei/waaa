@@ -21,24 +21,31 @@ router.get('/', isAuthenticated, (req, res) => {
     });
 });
 
-// **タスクの追加**
+// **タスクの追加（新規追加後にタスク情報を返す）**
 router.post('/add', isAuthenticated, (req, res) => {
-    const { title, due_date } = req.body;
+    const { title, description, due_date, alarm_time } = req.body;
     const userId = req.user.id;
 
     db.run(
-        'INSERT INTO tasks (title, due_date, status, user_id) VALUES (?, ?, ?, ?)',
-        [title, due_date, '未完了', userId],
+        'INSERT INTO tasks (title, description, due_date, alarm_time, status, user_id) VALUES (?, ?, ?, ?, ?, ?)',
+        [title, description, due_date, alarm_time, '未完了', userId],
         function(err) {
             if (err) {
                 return res.status(500).json({ error: 'タスクの追加に失敗しました' });
             }
-            res.json({ message: 'タスクが追加されました', taskId: this.lastID });
+
+            // 追加されたタスクのデータを取得して返す
+            db.get('SELECT * FROM tasks WHERE id = ?', [this.lastID], (err, newTask) => {
+                if (err) {
+                    return res.status(500).json({ error: 'タスク情報の取得に失敗しました' });
+                }
+                res.json(newTask);
+            });
         }
     );
 });
 
-// **タスクの編集**
+// **タスクの編集（ポップアップフォーム対応）**
 router.put('/edit/:id', isAuthenticated, (req, res) => {
     const { title, due_date } = req.body;
     const userId = req.user.id;
@@ -51,7 +58,14 @@ router.put('/edit/:id', isAuthenticated, (req, res) => {
             if (err) {
                 return res.status(500).json({ error: 'タスクの編集に失敗しました' });
             }
-            res.json({ message: 'タスクが更新されました' });
+
+            // 編集後のタスク情報を返す
+            db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, updatedTask) => {
+                if (err) {
+                    return res.status(500).json({ error: 'タスク情報の取得に失敗しました' });
+                }
+                res.json(updatedTask);
+            });
         }
     );
 });
@@ -86,7 +100,14 @@ router.put('/:id', isAuthenticated, (req, res) => {
             if (err) {
                 return res.status(500).json({ error: 'タスクの更新に失敗しました' });
             }
-            res.json({ message: 'タスクの状態を更新しました' });
+
+            // 更新されたタスク情報を返す
+            db.get('SELECT * FROM tasks WHERE id = ?', [taskId], (err, updatedTask) => {
+                if (err) {
+                    return res.status(500).json({ error: 'タスク情報の取得に失敗しました' });
+                }
+                res.json(updatedTask);
+            });
         }
     );
 });

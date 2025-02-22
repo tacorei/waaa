@@ -43,20 +43,30 @@ router.post('/register', async (req, res) => {
             return res.redirect('/register');
         }
         req.flash('success', 'ユーザー登録が完了しました');
-        res.redirect('/login.html');
+        res.redirect('/login');
     });
 });
 
 // **ログインAPI**
-router.post('/login', passport.authenticate('local', {
-    successRedirect: '/todolist.html',
-    failureRedirect: '/login.html',
-    failureFlash: true
-}));
+router.post('/login', (req, res, next) => {
+    passport.authenticate('local', (err, user, info) => {
+        if (err) return next(err);
+        if (!user) {
+            req.flash('error', info.message);
+            return res.redirect('/login');
+        }
+
+        req.logIn(user, (err) => {
+            if (err) return next(err);
+            // **EJSファイルに遷移**
+            res.render('todolist', { user, message: req.flash('success') });
+        });
+    })(req, res, next);
+});
 
 // **ログアウトAPI**
 router.get('/logout', (req, res, next) => {
-    req.logout(function(err) {
+    req.logout(function (err) {
         if (err) { return next(err); }
         req.flash('success', 'ログアウトしました');
         res.redirect('/');
