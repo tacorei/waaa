@@ -14,18 +14,23 @@
             });
         });
 
+        // タスク一覧を取得して表示する
         function fetchTasks() {
             fetch('/tasks')
                 .then(response => response.json())
                 .then(tasks => {
                     let taskList = document.getElementById("taskList");
                     taskList.innerHTML = "";
+
                     tasks.forEach(task => {
                         let li = document.createElement("li");
                         li.innerHTML = `
-                            <input type="checkbox" ${task.status === 'completed' ? 'checked' : ''} 
+                            <input type="checkbox" ${task.status === '完了' ? 'checked' : ''} 
                                 onchange="toggleTaskStatus(${task.id}, this.checked)">
-                            <span class="${task.status === 'completed' ? 'completed' : ''}"><%= task.title %> (<%= task.status %>)</span>
+                            <span class="${task.status === '完了' ? 'completed' : ''}">
+                                ${task.title} (${task.status}) - 締切: ${task.due_date || '未設定'}
+                            </span>
+                            <button onclick="editTask(${task.id}, '${task.title}', '${task.due_date}')">編集</button>
                             <button onclick="deleteTask(${task.id})">削除</button>
                         `;
                         taskList.appendChild(li);
@@ -33,15 +38,17 @@
                 });
         }
 
+        // タスクの追加
         function addTask() {
             let title = document.getElementById("title").value;
             let description = document.getElementById("description").value;
             let due_date = document.getElementById("due_date").value;
+            let alarm_time = document.getElementById("alarm_time").value;
 
-            fetch('/tasks', {
+            fetch('/tasks/add', {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title, description, due_date })
+                body: JSON.stringify({ title, description, due_date, alarm_time })
             })
             .then(response => response.json())
             .then(() => {
@@ -50,8 +57,9 @@
             });
         }
 
+        // タスクのステータスを更新する
         function toggleTaskStatus(taskId, isChecked) {
-            let newStatus = isChecked ? 'completed' : 'pending';
+            let newStatus = isChecked ? '完了' : '未完了';
 
             fetch(`/tasks/${taskId}`, {
                 method: "PUT",
@@ -61,36 +69,63 @@
             .then(() => fetchTasks());
         }
 
+        // タスクを削除する
         function deleteTask(taskId) {
-            fetch(`/tasks/${taskId}`, { method: "DELETE" })
+            fetch(`/tasks/delete/${taskId}`, { method: "DELETE" })
                 .then(() => fetchTasks());
         }
+
+        // タスクを編集する
+        function editTask(taskId, currentTitle, currentDueDate) {
+            let newTitle = prompt("新しいタスク名を入力してください:", currentTitle);
+            let newDueDate = prompt("新しい締切日を入力してください (YYYY-MM-DD):", currentDueDate);
+
+            if (newTitle && newDueDate) {
+                fetch(`/tasks/edit/${taskId}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ title: newTitle, due_date: newDueDate })
+                })
+                .then(() => fetchTasks());
+            }
+        }
     </script>
+
     <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
         .completed {
             text-decoration: line-through;
             color: gray;
         }
+
+        button {
+            margin-left: 10px;
+        }
+
+        form {
+            margin-top: 20px;
+        }
+
+        input, button {
+            margin: 5px 0;
+        }
     </style>
 </head>
 <body>
-    <h2>タスク一覧</h2>
+    <h2>📝 タスク一覧</h2>
     <ul id="taskList">
-        <% tasks.forEach(task => { %>
-            <li>
-                <input type="checkbox" <%= task.status === 'completed' ? 'checked' : '' %> 
-                    onchange="toggleTaskStatus(<%= task.id %>, this.checked)">
-                <span class="<%= task.status === 'completed' ? 'completed' : '' %>"><%= task.title %> (<%= task.status %>)</span>
-                <button onclick="deleteTask(<%= task.id %>)">削除</button>
-            </li>
-        <% }); %>
+        <!-- タスクはここに表示される -->
     </ul>
 
-    <h3>新しいタスクを追加</h3>
+    <h3>🆕 新しいタスクを追加</h3>
     <form id="addTaskForm">
         <input type="text" id="title" placeholder="タスク名" required>
         <input type="text" id="description" placeholder="詳細">
         <input type="date" id="due_date">
+        <input type="time" id="alarm_time" placeholder="アラーム時間">
         <button type="submit">追加</button>
     </form>
 </body>

@@ -16,7 +16,7 @@ app.set('views', path.join(__dirname, 'views'));
 
 // **セッション設定**
 app.use(session({
-    secret: 'secret_key',
+    secret: process.env.SESSION_SECRET || 'secret_key',
     resave: false,
     saveUninitialized: false
 }));
@@ -35,11 +35,12 @@ app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // **ルート設定**
+// ログイン画面（未ログインユーザー向け）
 app.get('/', (req, res) => {
     res.render('login', { message: req.flash('error') });
 });
 
-// **ログイン後のリダイレクト先**
+// **ログイン後のトップページ**
 app.get('/top', (req, res) => {
     if (!req.isAuthenticated()) {
         return res.redirect('/');
@@ -47,9 +48,27 @@ app.get('/top', (req, res) => {
     res.render('top');
 });
 
+// **ログイン中のユーザー向けのパスワード変更ページ**
+app.get('/update-password', (req, res) => {
+    if (!req.isAuthenticated()) {
+        return res.redirect('/login.html');
+    }
+    res.render('update_password', { message: '' });
+});
+
+// **未ログインユーザー向けのパスワードリセットページ**
+app.get('/reset-password', (req, res) => {
+    res.render('reset_password', { message: '' });
+});
+
 // **APIルートの登録**
 app.use('/auth', authRoutes);
 app.use('/tasks', taskRoutes);
+
+// **404エラーハンドリング**
+app.use((req, res, next) => {
+    res.status(404).render('404', { message: 'ページが見つかりませんでした。' });
+});
 
 // **サーバー起動**
 const PORT = process.env.PORT || 5000;

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>タスクの編集</title>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const taskId = urlParams.get('id');
+            fetchTaskDetails(taskId);
+
+            document.getElementById("editTaskForm").addEventListener("submit", function(event) {
+                event.preventDefault();
+                editTask(taskId);
+            });
+        });
+
+        function fetchTaskDetails(taskId) {
+            fetch(`/tasks/${taskId}`)
+                .then(response => response.json())
+                .then(task => {
+                    document.getElementById("title").value = task.title;
+                    document.getElementById("description").value = task.description;
+                    document.getElementById("due_date").value = task.due_date;
+                    document.getElementById("alarm_time").value = task.alarm_time;
+                });
+        }
+
+        function editTask(taskId) {
+            let title = document.getElementById("title").value;
+            let description = document.getElementById("description").value;
+            let due_date = document.getElementById("due_date").value;
+            let alarm_time = document.getElementById("alarm_time").value;
+
+            fetch(`/tasks/edit/${taskId}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, description, due_date, alarm_time })
+            })
+            .then(response => response.json())
+            .then(() => {
+                alert("タスクが更新されました！");
+                window.location.href = "/top";
+            });
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            width: 300px;
+        }
+
+        input, button, textarea {
+            margin-bottom: 10px;
+            padding: 10px;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <h2>✏️ タスクの編集</h2>
+    <form id="editTaskForm">
+        <input type="text" id="title" placeholder="タスク名" required>
+        <textarea id="description" placeholder="詳細"></textarea>
+        <input type="date" id="due_date">
+        <input type="time" id="alarm_time" placeholder="アラーム時間">
+        <button type="submit">更新</button>
+    </form>
+</body>
+</html>
