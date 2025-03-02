@@ -1,190 +1,64 @@
-<!-- views/todolist.ejs -->
 <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>タスク管理</title>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            fetchTasks();
-
-            document.getElementById("addTaskForm").addEventListener("submit", function(event) {
-                event.preventDefault();
-                addTask();
-            });
-        });
-
-        // タスク一覧を取得して表示する
-        function fetchTasks() {
-            fetch('/tasks')
-                .then(response => response.json())
-                .then(tasks => {
-                    let taskList = document.getElementById("taskList");
-                    taskList.innerHTML = "";
-
-                    tasks.forEach(task => {
-                        renderTask(task);
-                    });
-                });
-        }
-
-        // タスクを1つ描画する関数
-        function renderTask(task) {
-            let taskList = document.getElementById("taskList");
-            let li = document.createElement("li");
-            li.id = `task-${task.id}`;
-            li.innerHTML = `
-                <input type="checkbox" ${task.status === '完了' ? 'checked' : ''} 
-                    onchange="toggleTaskStatus(${task.id}, this.checked)">
-                <span class="${task.status === '完了' ? 'completed' : ''}">
-                    ${task.title} (${task.status}) - 締切: ${task.due_date || '未設定'}
-                </span>
-                <button onclick="openEditPopup(${task.id}, '${task.title}', '${task.due_date}')">編集</button>
-                <button onclick="deleteTask(${task.id})">削除</button>
-            `;
-            taskList.appendChild(li);
-        }
-
-        // タスクの追加
-        function addTask() {
-            let title = document.getElementById("title").value;
-            let description = document.getElementById("description").value;
-            let due_date = document.getElementById("due_date").value;
-            let alarm_time = document.getElementById("alarm_time").value;
-
-            fetch('/tasks/add', {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title, description, due_date, alarm_time })
-            })
-            .then(response => response.json())
-            .then(task => {
-                renderTask(task);  // 新しいタスクを即座に描画
-                document.getElementById("addTaskForm").reset();
-            });
-        }
-
-        // タスクのステータスを更新する
-        function toggleTaskStatus(taskId, isChecked) {
-            let newStatus = isChecked ? '完了' : '未完了';
-
-            fetch(`/tasks/${taskId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ status: newStatus })
-            })
-            .then(() => fetchTasks());
-        }
-
-        // タスクを削除する
-        function deleteTask(taskId) {
-            fetch(`/tasks/delete/${taskId}`, { method: "DELETE" })
-                .then(() => {
-                    document.getElementById(`task-${taskId}`).remove();
-                });
-        }
-
-        // 編集ポップアップを開く
-        function openEditPopup(taskId, currentTitle, currentDueDate) {
-            document.getElementById("editTaskId").value = taskId;
-            document.getElementById("editTitle").value = currentTitle;
-            document.getElementById("editDueDate").value = currentDueDate;
-
-            document.getElementById("editPopup").style.display = "block";
-        }
-
-        // 編集ポップアップを閉じる
-        function closeEditPopup() {
-            document.getElementById("editPopup").style.display = "none";
-        }
-
-        // タスクを編集して保存する
-        function saveTaskEdits() {
-            const taskId = document.getElementById("editTaskId").value;
-            const newTitle = document.getElementById("editTitle").value;
-            const newDueDate = document.getElementById("editDueDate").value;
-
-            fetch(`/tasks/edit/${taskId}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: newTitle, due_date: newDueDate })
-            })
-            .then(() => {
-                fetchTasks();
-                closeEditPopup();
-            });
-        }
-    </script>
-
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-
-        .completed {
-            text-decoration: line-through;
-            color: gray;
-        }
-
-        button {
-            margin-left: 10px;
-        }
-
-        form {
-            margin-top: 20px;
-        }
-
-        input, button {
-            margin: 5px 0;
-        }
-
-        /* ポップアップスタイル */
-        #editPopup {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background-color: white;
-            padding: 20px;
-            border: 1px solid #ccc;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        #editPopup input {
-            display: block;
-            margin-bottom: 10px;
-            width: 100%;
-        }
-
-        #editPopup button {
-            margin-right: 10px;
-        }
-    </style>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Todoリスト</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
-    <h2>📝 タスク一覧</h2>
-    <ul id="taskList">
-        <!-- タスクはここに表示される -->
-    </ul>
+<body class="bg-light">
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">Todoリスト</h1>
 
-    <h3>🆕 新しいタスクを追加</h3>
-    <form id="addTaskForm">
-        <input type="text" id="title" placeholder="タスク名" required>
-        <input type="text" id="description" placeholder="詳細">
-        <input type="date" id="due_date">
-        <input type="time" id="alarm_time" placeholder="アラーム時間">
-        <button type="submit">追加</button>
-    </form>
+        <!-- ✅ トップへ戻るボタン -->
+        <div class="text-end mb-3">
+            <a href="/top" class="btn btn-secondary">トップへ</a>
+        </div>
 
-    <!-- 編集ポップアップフォーム -->
-    <div id="editPopup">
-        <h3>✏️ タスク編集</h3>
-        <input type="hidden" id="editTaskId">
-        <input type="text" id="editTitle" placeholder="新しいタスク名" required>
-        <input type="date" id="editDueDate" placeholder="新しい締切日">
-        <button onclick="saveTaskEdits()">保存</button>
-        <button onclick="closeEditPopup()">キャンセル</button>
+        <!-- 🔴 TODOの追加フォーム -->
+        <div class="card p-4 mb-4">
+            <h4 class="mb-3">新しいTODOを追加</h4>
+            <form action="/add" method="POST" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="title" class="form-control" placeholder="タイトル" required>
+                </div>
+                <div class="col-md-4">
+                    <input type="text" name="description" class="form-control" placeholder="詳細">
+                </div>
+                <div class="col-md-2">
+                    <input type="date" name="due_date" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">追加</button>
+                </div>
+            </form>
+        </div>
+
+        <!-- 🔵 TODOリストの表示 -->
+        <div class="card p-4">
+            <h4 class="mb-3">TODO一覧</h4>
+            <% if (todos.length > 0) { %>
+                <ul class="list-group">
+                    <% todos.forEach(todo => { %>
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong><%= todo.title %></strong>
+                                <small class="text-muted d-block">
+                                    <%= todo.description ? todo.description : "詳細なし" %>
+                                    （期限: <%= todo.due_date ? todo.due_date : "なし" %>）
+                                </small>
+                            </div>
+                            <!-- 🟢 削除ボタン -->
+                            <form action="/delete/<%= todo.id %>" method="POST">
+                                <button type="submit" class="btn btn-danger btn-sm">削除</button>
+                            </form>
+                        </li>
+                    <% }); %>
+                </ul>
+            <% } else { %>
+                <p class="text-center text-muted">現在、TODOはありません。</p>
+            <% } %>
+        </div>
     </div>
 </body>
 </html>

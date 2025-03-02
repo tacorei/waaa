@@ -12,7 +12,8 @@ db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
     email TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL
+    password_hash TEXT NOT NULL,
+    profile_image TEXT NULL  -- ✅ プロフィール画像の追加
 )`);
 
 // **タスクテーブルの作成**
@@ -23,7 +24,8 @@ db.run(`CREATE TABLE IF NOT EXISTS tasks (
     description TEXT,
     due_date TEXT,
     status TEXT DEFAULT '未完了',  -- 初期ステータスは「未完了」
-    alarm_time TEXT,               -- 新規追加：アラーム設定時間
+    alarm_time TEXT,               -- アラーム設定時間
+    notified INTEGER DEFAULT 0,     -- ✅ 通知済みフラグ（0: 未通知, 1: 通知済み）
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
@@ -50,6 +52,16 @@ db.run(`CREATE TABLE IF NOT EXISTS friends (
 db.run(`CREATE TABLE IF NOT EXISTS points (
     user_id INTEGER PRIMARY KEY,
     points INTEGER DEFAULT 0,
+    FOREIGN KEY(user_id) REFERENCES users(id)
+)`);
+
+// **ポイント履歴テーブルの作成（新規）**
+db.run(`CREATE TABLE IF NOT EXISTS point_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    points_changed INTEGER NOT NULL,
+    reason TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(user_id) REFERENCES users(id)
 )`);
 
